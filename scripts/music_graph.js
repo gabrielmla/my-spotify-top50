@@ -12,7 +12,7 @@ const color = d3.scaleOrdinal(d3.schemeCategory20);
 
 const simulation = d3.forceSimulation()
     .force('link', d3.forceLink().id(d => d.id))
-    .force('collide', d3.forceCollide(30))
+    .force('collide', d3.forceCollide(35))
     .force('center', d3.forceCenter((width / 2), height / 2))
     .force('genreX', d3.forceX(genreX).strength(0.02))
     .force('genreY', d3.forceY(genreY));
@@ -28,8 +28,24 @@ const legend = d3.legendColor()
     .classPrefix('legend');
 
 
-d3.json('top50.json', function (error, graph) {
+d3.json('mytop50.json', function (error, json) {
     if (error) throw error;
+
+    var artistas = json.items;
+    var nodes = artistas.map(createNodes);
+    var edges = artistas.map(createEdges);
+    var d = [];
+
+    // Deixa os edges concatenados, tira dos arrays
+    for(var i = 0; i < edges.length; i++){
+      for(var j = 0; j < edges[i].length; j++){
+        if(!d.includes(edges[i][j])){
+          d.push(edges[i][j]);
+        }
+      }
+    }
+
+    var graph = {nodes: nodes, edges: d};
 
     const types = d3.set(graph.edges.map(e => e.type)).values();
     color.domain(types);
@@ -214,19 +230,19 @@ function dragged(d) {
 
 function genreX(n) {
     const genres = n.genres.join('-');
-    if (genres.includes('hip hop') || genres.includes('rap')) {
-        return width / 4 * 3;
-    } else if (genres.includes('house')) {
+    if (genres.includes('dance pop') || genres.includes('rap')) {
+        return width / 4 * 4;
+    } else if (genres.includes('pop rap')) {
         return width / 4;
     } else {
-        return width;
+        return width + 50;
     }
 }
 
 function genreY(n) {
     const genres = n.genres.join('-');
-    if (genres.length === 0 && !genres.includes('hip hop') && !genres.includes('rap') && genres.includes('house')) {
-        return height / 4;
+    if (genres.length === 0 && !genres.includes('dance pop') || genres.includes('rap') || genres.includes('pop rap')) {
+        return height / 4 * 3;
     } else {
         return height / 2;
     }
@@ -236,4 +252,24 @@ function dragended(d) {
     if (!d3.event.active) simulation.alphaTarget(0);
     d.fx = null;
     d.fy = null;
+}
+
+function createEdges(element, index, array){
+  var edges = [];
+  for(var i = 0; i < array.length; i++){
+    if(array[i].id != element.id){
+      for(var j = 0; j < element.genres.length; j++){
+        for(var k = 0; k < array[i].genres.length; k++){
+          if(element.genres[j] === array[i].genres[k] && element.genres[j] != 'pop'){
+            edges.push({source: element.id, target: array[i].id, type: element.genres[j]});
+          }
+        }
+      }
+    }
+  }
+  return edges;
+}
+
+function createNodes(element, index, array){
+  return {id: element.id, name: element.name, img: element.images[2].url, url: element.external_urls.spotify, genres: element.genres};
 }
